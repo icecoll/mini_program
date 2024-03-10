@@ -1,3 +1,5 @@
+require 'net/http'
+
 module MiniProgram
   class Client
     attr_reader :appid, :app_secret
@@ -116,6 +118,41 @@ module MiniProgram
                                        data: result,
                                        message: "小程序登录成功",
                                        message_kind: :login_success)
+      end
+
+    end
+
+    # 获取手机号
+    def get_phone_number(code)
+      # 获取 access_token
+      get_token_result = get_access_token
+      if get_token_result.failure?
+        logger.error "Get token failed."
+        return get_token_result
+      end
+
+      api = "https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=#{get_token_result["access_token"]}"
+      payload = { code: code }
+      result = post(api, payload)
+
+      if result["errcode"] && result["errcode"].to_s != "0"
+        logger.tagged "get phone number"
+        logger.error <<~ERROR
+          Get phone number failed.
+          api: #{api}
+          result: #{result}
+        ERROR
+
+        MiniProgram::ServiceResult.new(success: false,
+                                       error: result,
+                                       message: result["errmsg"],
+                                       message_kind: :get_phone_number_failed)
+
+      else
+        MiniProgram::ServiceResult.new(success: true,
+                                       data: result,
+                                       message: "获取手机号成功",
+                                       message_kind: :get_phone_number_success)
       end
 
     end
